@@ -1,34 +1,11 @@
-import argparse
 import asyncio
 import functools
 
 import speech_recognition as sr
+import os
 
 
-def get_backend(name, recognizer):
-    """
-    Returns a recognizer function for the given backend name.
-
-    Args:
-        name: The string name of a backend.
-        recognizer: a Recognizer instance to call the backend.
-
-    Returns:
-        A recognizer function that takes an Audio Source as its only parameter.
-
-    Raises:
-        NotImplementedError: Raises this if the backend is not recognized.
-    """
-    assert isinstance(recognizer, sr.Recognizer)
-    if name == "google":
-        return recognizer.recognize_google
-    elif name == "cmu":
-        return recognizer.recognize_sphinx
-    else:
-        raise NotImplementedError(f"Backend {name} not set up yet!")
-
-
-def parse_phrase(recognizer, audio, backend):
+def parse_phrase(recognizer, audio):
     """
     Calls the specified backend with audio data and serializes the result.
 
@@ -43,16 +20,17 @@ def parse_phrase(recognizer, audio, backend):
     assert isinstance(recognizer, sr.Recognizer)
     response = {"transcription": None, "success": False, "error": None}
     try:
+        response["transcription"] = recognizer.recognize_google(audio)
         response["success"] = True
-        response["transcription"] = get_backend(backend, recognizer)(audio)
-    except sr.RequestError:
+    except sr.RequestError as error:
         # API was unreachable or unresponsive
-        response["error"] = "API unavailable"
+        response["error"] = f"Error: {error}"
     except sr.UnknownValueError:
         # speech was unintelligible
         response["error"] = "Unable to recognize speech"
 
     report(response)
+    act(response)
 
 
 def report(result):
@@ -68,17 +46,38 @@ def report(result):
         print(f"Sorry, I didn't get that :(\nError: {result.get('error')}")
 
 
+def act(result):
+    """
+    Given a successful response, attempts to find an action associated with
+    the transcription. If one is found, calls the action method.
+
+    Args:
+        A result object with keys 'success' and 'transcription' (at a minimum)
+    """
+    if result.get("success"):
+        phrase = result.get("transcription")
+        action = phrase_actions.get(phrase)
+        try:
+            action()
+        except:
+            print(f"Phrase action '{phrase}' does not have an associated action")
+
+
+def speak(phrase):
+    """
+    Prints the given string followed by an exclamation point.
+    """
+    print(f"{phrase}!")
+
+
+phrase_actions = {
+    "say hello": functools.partial(speak, "hello"),
+    "say goodbye": functools.partial(speak, "goodbye"),
+    "exit": functools.partial(os._exit, 0),
+}
+
 if __name__ == "__main__":
-    # configure our setup
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "backend",
-        choices=("google", "cmu"),
-        nargs="?",
-        default="google",
-        help="The name of the backend to use (one of 'google' or 'cmu')",
-    )
-    args = parser.parse_args()
+    # create audio tools
     recognizer = sr.Recognizer()
     microphone = sr.Microphone(device_index=0)
 
@@ -88,9 +87,7 @@ if __name__ == "__main__":
 
     # listen up!
     print("Speak!")
-    stop_callback = recognizer.listen_in_background(
-        microphone, functools.partial(parse_phrase, backend=args.backend)
-    )
+    recognizer.listen_in_background(microphone, parse_phrase)
 
-    # unnecessary async to keep listening forever
+    # keep listening forever
     asyncio.get_event_loop().run_forever()
