@@ -70,10 +70,20 @@ def speak(phrase):
     print(f"{phrase}!")
 
 
+def exit():
+    """
+    Attempts to exit the program (not gracefully). Untested on non-Windows systems.
+    """
+    if os.name == "nt":
+        os._exit(0)
+    else:
+        os.kill(os.getpid(), signal.SIGINT)
+
+
 phrase_actions = {
     "say hello": functools.partial(speak, "hello"),
     "say goodbye": functools.partial(speak, "goodbye"),
-    "exit": functools.partial(os._exit, 0),
+    "exit": exit,
 }
 
 if __name__ == "__main__":
