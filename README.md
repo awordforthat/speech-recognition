@@ -10,7 +10,7 @@ This script demonstrates the use of the [SpeechRecognition](https://pypi.org/pro
 
 1. Create a virtual environment with `python -m venv <your venv name>`
 2. Activate the virtual environment: `call <venv name>\Scripts\activate` (Windows) or `source <venv name>/bin/activate` (OSX/Linux)
-3. Install the requirements: `pip install -r requirements.txt`. If you would like to contribute to this repo, you should also install the packages in `dev_requirements.txt`
+3. Install the requirements: `pip install -r requirements/requirements.txt`. If you would like to contribute to this repo, you should also install the packages in `dev_requirements.txt`
 
 ## Running the project
 
